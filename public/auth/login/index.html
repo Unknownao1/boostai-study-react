@@ -364,7 +364,7 @@
             </button>
           </div>
         </div>
-        <div class="err" id="passErr">Password must be at least 6 characters.</div>
+        <div class="err" id="passErr">Enter any password to continue.</div>
 
         <button class="submit anim d6" id="submit"><span class="spin"></span><span id="submitLabel">Log in</span></button>
 
@@ -419,44 +419,43 @@
    BoostAI — auth page logic
    ---------------------------------------------------------------------
    • Mode toggle (log in / sign up), show-hide password, validation.
-   • Real auth via Supabase: fill in CONFIG below and it works.
-     - email + password  ->  signUp / signInWithPassword
-     - Google / Apple / Microsoft  ->  signInWithOAuth({ provider })
-   • If Supabase isn't configured (or can't load, e.g. this preview),
-     the page runs in DESIGN-PREVIEW mode and explains what to do.
+   • Preview access is enabled for demos right now.
+   • Any believable email + password creates a temporary local session.
+   • The student is then sent to the branded dashboard flow.
    ===================================================================== */
 
-/* >>> 1) PASTE YOUR SUPABASE PROJECT DETAILS HERE <<<
-   Find them in your Supabase dashboard → Project Settings → API.
-   The anon key is safe to expose in the browser. */
 const CONFIG = {
-  SUPABASE_URL: "https://hbakdtutzypadslelyuz.supabase.co",        // Supabase project URL
-  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhiYWtkdHV0enlwYWRzbGVseXV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMjg0MzgsImV4cCI6MjA5NTkwNDQzOH0.8pmIgzIGOPVGGTsYnUKjKVpx1QP8bSPIiXFtyeoP95c",   // Supabase anon public key
-  // where to send students after a successful login:
-  REDIRECT_TO: "../school/dashboard.html",
+  REDIRECT_TO: "/dashboard",
 };
 
 const $ = (id) => document.getElementById(id);
-const REDIRECT = new URL(CONFIG.REDIRECT_TO, location.href).href;
+const params = new URLSearchParams(location.search);
+const returnTo = params.get("returnTo") || "/";
+const REDIRECT = new URL(CONFIG.REDIRECT_TO, location.origin).href;
+const LOCAL_SESSION_KEY = "boostai-local-session";
+const LOCAL_USERS_KEY = "boostai-local-users";
 
-/* ---- set up Supabase if we can ---- */
-let supa = null, ready = false;
-try {
-  if (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY && window.supabase) {
-    supa = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-    ready = true;
+showNote(
+  "info",
+  "Preview login is enabled. Use any email and password for now and we’ll take the user straight into the demo dashboard."
+);
+
+function prewarmDashboard(){
+  try {
+    fetch(REDIRECT, { credentials: "same-origin" }).catch(() => {});
+  } catch (err) {
+    // Ignore prewarm issues and keep the login flow moving.
   }
-} catch (e) { ready = false; }
+}
 
-/* ---- preview-mode banner ---- */
-if (!ready) {
-  showNote("info",
-    "Design preview — the page looks and behaves exactly as it will live. " +
-    "To make sign-in real, add your Supabase keys at the top of this file (I can walk you through it).");
+if ("requestIdleCallback" in window) {
+  window.requestIdleCallback(prewarmDashboard, { timeout: 1200 });
+} else {
+  setTimeout(prewarmDashboard, 100);
 }
 
 /* ---- mode toggle ---- */
-let mode = new URLSearchParams(location.search).get("mode") === "signup" ? "signup" : "login";
+let mode = params.get("mode") === "signup" ? "signup" : "login";
 function applyMode() {
   const signup = mode === "signup";
   $("title").textContent = signup ? "Create your account" : "Log in";
@@ -490,6 +489,51 @@ function showNote(kind, msg){ const n=$("note"); n.className="note show "+kind; 
 function clearNote(){ const n=$("note"); n.className="note"; n.textContent=""; }
 function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
 function setLoading(on){ const b=$("submit"); b.classList.toggle("loading", on); b.disabled=on; }
+function titleCase(v){
+  return v
+    .replace(/[._-]+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+function createPreviewProfile(email, fullName){
+  const trimmedName = fullName.trim();
+  const name = trimmedName || titleCase((email.split("@")[0] || "anon")) || "Anon";
+  return {
+    id: "preview-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8),
+    email,
+    name,
+    mode: "preview",
+    returnTo,
+    createdAt: new Date().toISOString()
+  };
+}
+function loadPreviewUsers(){
+  try {
+    return JSON.parse(localStorage.getItem(LOCAL_USERS_KEY) || "[]");
+  } catch (err) {
+    return [];
+  }
+}
+function savePreviewUsers(users){
+  localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(users));
+}
+function savePreviewSession(profile){
+  localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(profile));
+}
+function goToDashboard(profile){
+  try {
+    const users = loadPreviewUsers().filter((user) => user.email !== profile.email);
+    users.push(profile);
+    savePreviewUsers(users);
+    savePreviewSession(profile);
+  } catch (err) {
+    // Ignore storage issues and still continue the demo flow.
+  }
+
+  window.location.replace(REDIRECT);
+}
 
 /* ---- email/password submit ---- */
 $("submit").addEventListener("click", onSubmit);
@@ -499,63 +543,37 @@ $("email").addEventListener("keydown", (e)=>{ if(e.key==="Enter") onSubmit(); })
 async function onSubmit(){
   const email = $("email").value.trim();
   const pass  = $("password").value;
+  const fullName = $("name").value;
   let ok = true;
   $("emailErr").classList.toggle("show", !(ok = validEmail(email)));
-  let okp = pass.length >= 6;
+  let okp = pass.trim().length >= 1;
   $("passErr").classList.toggle("show", !okp);
   if (!ok || !okp) return;
 
-  if (!ready){
-    showNote("info","Looks good! In preview mode I can't actually sign you in yet — add your Supabase keys and this button will create the account / log in for real.");
-    return;
-  }
-
   setLoading(true); clearNote();
-  try{
-    if (mode === "signup"){
-      const { error } = await supa.auth.signUp({
-        email, password: pass,
-        options: { emailRedirectTo: REDIRECT, data: { full_name: $("name").value.trim() } },
-      });
-      if (error) throw error;
-      showNote("ok","Account created. Check your email to confirm, then log in.");
-    } else {
-      const { error } = await supa.auth.signInWithPassword({ email, password: pass });
-      if (error) throw error;
-      window.location.href = REDIRECT;
-    }
-  } catch(err){
-    showNote("bad", err?.message || "Something went wrong. Please try again.");
-  } finally { setLoading(false); }
+  const profile = createPreviewProfile(email, fullName);
+  goToDashboard(profile);
 }
 
 /* ---- SSO buttons ---- */
 document.querySelectorAll(".sso button").forEach((btn) => {
-  btn.addEventListener("click", async () => {
+  btn.addEventListener("click", () => {
     const provider = btn.getAttribute("data-provider");
-    if (!ready){
-      showNote("info","This is where "+labelFor(provider)+" sign-in happens. Connect Supabase and enable "+labelFor(provider)+" in its Auth providers to switch it on.");
-      return;
-    }
+    const profile = createPreviewProfile(
+      provider + "@preview.boostai.study",
+      labelFor(provider) + " Preview"
+    );
     clearNote();
-    try{
-      const { error } = await supa.auth.signInWithOAuth({ provider, options: { redirectTo: REDIRECT } });
-      if (error) throw error;
-    }catch(err){ showNote("bad", err?.message || "Couldn't start sign-in."); }
+    goToDashboard(profile);
   });
 });
 function labelFor(p){ return p==="google"?"Google":p==="apple"?"Apple":"Microsoft"; }
 
 /* ---- forgot password ---- */
-$("forgot").addEventListener("click", async () => {
+$("forgot").addEventListener("click", () => {
   const email = $("email").value.trim();
   if (!validEmail(email)){ $("emailErr").classList.add("show"); showNote("info","Enter your email above first, then tap “Forgot your password?”."); return; }
-  if (!ready){ showNote("info","Connect Supabase and this will email a reset link to "+email+"."); return; }
-  try{
-    const { error } = await supa.auth.resetPasswordForEmail(email, { redirectTo: new URL("reset.html", location.href).href });
-    if (error) throw error;
-    showNote("ok","If an account exists for that email, a reset link is on its way.");
-  }catch(err){ showNote("bad", err?.message || "Couldn't send the reset email."); }
+  showNote("info","Password reset is still a placeholder in preview mode. For demos, use any password and continue into the dashboard.");
 });
 
 $("terms").addEventListener("click", (e)=>{ e.preventDefault(); showNote("info","Link your Terms of Use page here when it's ready."); });
