@@ -29,7 +29,8 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      # `next build` type-checks (TypeScript strict) and fails on any type error,
-      # so this step is our build AND type-check gate.
-      - name: Build (also type-checks)
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Build
         run: npm run build
