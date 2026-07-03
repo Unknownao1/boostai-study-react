@@ -2,14 +2,16 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import styles from "./dashboard.module.css";
 
-type SessionState = {
+interface UserInfo {
+  id: string;
   email: string;
-  name: string;
-  returnTo: string;
-};
+}
+
+interface StudyDashboardProps {
+  user: UserInfo;
+}
 
 type NavItem = {
   label: string;
@@ -21,12 +23,6 @@ type NavItem = {
 type NavSection = {
   title: string;
   items: NavItem[];
-};
-
-const defaultSession: SessionState = {
-  email: "anon@boostai.study",
-  name: "Anon",
-  returnTo: "/"
 };
 
 const navSections: NavSection[] = [
@@ -97,24 +93,8 @@ function timeGreeting() {
   return "Good evening";
 }
 
-export function StudyDashboard() {
-  const [session, setSession] = useState<SessionState>(defaultSession);
-
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem("boostai-local-session");
-      if (!raw) return;
-
-      const parsed = JSON.parse(raw) as Partial<SessionState>;
-      const email = parsed.email?.trim() || defaultSession.email;
-      const name = parsed.name?.trim() || nameFromEmail(email) || defaultSession.name;
-      const returnTo = parsed.returnTo?.trim() || defaultSession.returnTo;
-
-      setSession({ email, name, returnTo });
-    } catch {
-      setSession(defaultSession);
-    }
-  }, []);
+export function StudyDashboard({ user }: StudyDashboardProps) {
+  const name = nameFromEmail(user.email);
 
   return (
     <main className={styles.page}>
@@ -151,11 +131,11 @@ export function StudyDashboard() {
           ))}
 
           <div className={styles.supportCard}>
-            <strong>Preview mode is on</strong>
-            <p>
-              This dashboard is wired for demo access right now, so you can keep
-              showing the product flow before real auth is finalised.
-            </p>
+            <strong>{user.email}</strong>
+            <p>Signed in to BoostAI Study.</p>
+            <form action="/api/auth/signout" method="POST">
+              <button type="submit" className={styles.signOutButton}>Sign out</button>
+            </form>
           </div>
         </aside>
 
@@ -173,7 +153,7 @@ export function StudyDashboard() {
                 Boost<span>AI</span>
               </span>
             </Link>
-            <span className={styles.avatar}>{session.name.charAt(0).toUpperCase()}</span>
+            <span className={styles.avatar}>{name.charAt(0).toUpperCase()}</span>
           </div>
 
           <div className={styles.topbar}>
@@ -191,7 +171,7 @@ export function StudyDashboard() {
                 <span className={styles.energyStatus}>Preview active</span>
               </div>
               <div className={styles.streakPill}>⚡ 14 / 15</div>
-              <div className={styles.avatar}>{session.name.charAt(0).toUpperCase()}</div>
+              <div className={styles.avatar}>{name.charAt(0).toUpperCase()}</div>
             </div>
           </div>
 
@@ -200,7 +180,7 @@ export function StudyDashboard() {
               <section className={styles.heroPanel}>
                 <span className={styles.eyebrow}>BoostAI Workspace</span>
                 <h1>
-                  {timeGreeting()}, <span>{session.name}</span>
+                  {timeGreeting()}, <span>{name}</span>
                 </h1>
                 <p>
                   Your preview account is live. Start with a revision plan, open a
@@ -210,9 +190,9 @@ export function StudyDashboard() {
                   <a className={styles.primaryCta} href="#">
                     Create my revision plan →
                   </a>
-                  <a className={styles.secondaryCta} href={session.returnTo || "/"}>
+                  <Link className={styles.secondaryCta} href="/">
                     Back to landing page
-                  </a>
+                  </Link>
                 </div>
               </section>
 

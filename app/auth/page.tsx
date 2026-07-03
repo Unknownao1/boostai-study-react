@@ -1,4 +1,10 @@
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+import { AuthLogin } from "@/components/boostai/AuthLogin";
+
+export const metadata: Metadata = {
+  title: "Sign In",
+  description: "Sign in or create an account to access BoostAI Study.",
+};
 
 type AuthPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -6,17 +12,18 @@ type AuthPageProps = {
 
 export default async function AuthPage({ searchParams }: AuthPageProps) {
   const params = await searchParams;
-  const nextParams = new URLSearchParams();
 
-  for (const [key, value] of Object.entries(params)) {
-    if (typeof value === "string") {
-      nextParams.set(key, value);
-    } else if (Array.isArray(value)) {
-      value.forEach((entry) => nextParams.append(key, entry));
-    }
-  }
+  const redirectTo =
+    typeof params.redirectTo === "string" ? params.redirectTo : "/dashboard";
 
-  const query = nextParams.toString();
-  redirect(query ? `/login.html?${query}` : "/login.html");
+  const errorMessage =
+    typeof params.error === "string"
+      ? "Something went wrong during sign in. Please try again."
+      : undefined;
+
+  return (
+    <main className="auth-page-wrapper">
+      <AuthLogin redirectTo={redirectTo} errorMessage={errorMessage} />
+    </main>
+  );
 }
-
