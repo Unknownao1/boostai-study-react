@@ -39,7 +39,7 @@ export function PersonaLanding({ page }: PersonaLandingProps) {
             <a href="#features">Features</a>
             <a href="#flow">Workflow</a>
             <a href="#faq">FAQ</a>
-            <a href="/login.html">Login</a>
+            <Link href="/auth" prefetch={false}>Login</Link>
             <a href="#cta" className={styles.navCta}>
               Open route
             </a>

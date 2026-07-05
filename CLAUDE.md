@@ -26,8 +26,10 @@ context, but **do not assume those features exist yet**.
 
 **What exists today (the MVP):**
 - A Next.js 15 + React 19 + TypeScript web app deployed on Vercel.
-- Landing pages (home, school, university) and a demo dashboard.
-- Mock content only — no real database, no AI calls, no payments, fake login.
+- Landing pages (home, school, university) and a real dashboard.
+- Real authentication via Supabase (email/password + Google OAuth).
+- Stripe subscription groundwork (checkout + webhook handler).
+- Proper CI/CD with GitHub Actions and Vercel preview deployments.
 
 **Golden rule:** This is an MVP. Prefer the smallest change that works. Do not add
 new tools, libraries, or services unless the task explicitly requires it and
@@ -44,6 +46,13 @@ new tools, libraries, or services unless the task explicitly requires it and
 | Demo questions, route cards, copy | `components/boostai/site-data.ts` |
 | Styling | the matching `*.module.css` next to the component |
 | Site-wide `<head>`, fonts, metadata | `app/layout.tsx` |
+| Supabase client (browser) | `lib/supabase/client.ts` |
+| Supabase client (server) | `lib/supabase/server.ts` |
+| Auth session refresh | `lib/supabase/middleware.ts` → `middleware.ts` |
+| Stripe integration | `lib/stripe/index.ts` |
+| API routes | `app/api/*/route.ts` |
+| Environment variables | `.env.example` (template) + `lib/env.ts` (validation) |
+| Database schema | `supabase/migrations/` |
 
 ### ⚠️ The legacy zone — do not edit without asking
 
@@ -76,13 +85,20 @@ through the change safely.
 
 - **Never commit secrets.** API keys, Supabase keys, Stripe keys, and OpenAI keys
   go in environment variables / Vercel project settings — never in the repo.
-  `public/assets/supabase-config.js` uses placeholders on purpose; keep it that way.
+  `.env.local` is gitignored. `.env.example` has placeholders only.
 - **Never push directly to `main`.** `main` is production (Vercel auto-deploys it).
   All work goes on a feature branch and reaches `main` via a Pull Request.
 - **Never delete files you did not create** without confirming with the user.
 - **Keep TypeScript strict.** Do not add `any`, `// @ts-ignore`, or disable lint
   rules to make an error go away. Fix the real cause or ask.
 - **No new dependencies** without checking `docs/ARCHITECTURE.md` and telling the user.
+- **Server/client boundary.** Never import `lib/supabase/server.ts`, `lib/stripe/`,
+  or any file that uses `next/headers` from a client component. See `docs/ARCHITECTURE.md` §3.
+- **Environment variables.** Never hardcode a URL, key, or secret. Always use
+  `process.env.VARIABLE_NAME` and add it to `.env.example` + `lib/env.ts`.
+  See `docs/ENVIRONMENTS.md`.
+- **Database changes.** Never modify the database schema without creating a new
+  migration file in `supabase/migrations/` and updating `docs/SUPABASE.md`.
 - **AI output quality is the #1 product risk.** When AI features are added later,
   never ship AI-generated solutions/answers without the verification steps in
   `docs/TESTING.md`.
@@ -117,6 +133,9 @@ Stop and ask (use the question tool) before:
 - Editing anything in `public/`.
 - Adding a dependency, service, or environment variable.
 - Changing auth, payments, or database behaviour.
+- Modifying `middleware.ts` or `lib/supabase/middleware.ts`.
+- Changing database schema or RLS policies.
+- Changing Stripe webhook handling or checkout flow.
 - Any change you cannot fully verify with the preflight check.
 - Deleting or renaming files.
 

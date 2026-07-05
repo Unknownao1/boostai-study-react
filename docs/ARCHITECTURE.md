@@ -10,10 +10,13 @@ document first — don't just do it.
 ## 1. Current architecture (the MVP, as of June 2026)
 
 ### Stack
-- **Framework:** Next.js 15 (App Router) + React 19
+- **Framework:** Next.js 15.5.9 (App Router) + React 19
 - **Language:** TypeScript, `strict: true`
 - **Styling:** CSS Modules (one `*.module.css` per component)
 - **Hosting:** Vercel, git-based auto-deploy from `main`
+- **Auth:** Supabase Auth (email/password + Google OAuth)
+- **Database:** Supabase PostgreSQL with Row Level Security
+- **Payments:** Stripe (subscription groundwork — checkout + webhooks)
 - **Fonts/assets:** local, under `public/boostai/`
 
 ### Layout
@@ -21,17 +24,34 @@ document first — don't just do it.
 app/                      Routing layer (thin — pages just render components or redirect)
   layout.tsx              Root: fonts, <head>, site metadata
   page.tsx                "/"        → HomeLanding
-  dashboard/page.tsx      "/dashboard" → StudyDashboard
+  dashboard/page.tsx      "/dashboard" → StudyDashboard (auth-gated)
+  auth/page.tsx            "/auth"    → AuthLogin (real Supabase auth)
   study|account/page.tsx  redirect → /dashboard
   university/page.tsx      redirect → /uni
-  auth/page.tsx            redirect → /login.html (legacy)
+  api/
+    auth/callback/route.ts  OAuth redirect callback
+    auth/signout/route.ts   Server-side sign out
+    checkout/route.ts       Creates Stripe Checkout Sessions
+    webhooks/stripe/route.ts Stripe webhook handler
+lib/                        One typed module per external service
+  env.ts                   Environment variable validation
+  supabase/
+    client.ts              Browser Supabase client (anon key only)
+    server.ts              Server Supabase client (cookie-based sessions)
+    middleware.ts           Session refresh helper
+  stripe/
+    index.ts               Stripe client + subscription tier config
+middleware.ts              Root middleware (session refresh + route protection)
 components/boostai/        The real UI
   HomeLanding.tsx          Home / route chooser
   PersonaLanding.tsx       Shared school/uni landing
   StudyWorkspace.tsx       Interactive demo (client component)
-  StudyDashboard.tsx       Demo dashboard (client component, reads localStorage)
+  StudyDashboard.tsx       Dashboard (client component, uses real user data)
+  AuthLogin.tsx            Login / signup page (client component)
   site-data.ts             All mock content, typed
   *.module.css             Styles
+supabase/
+  migrations/              SQL migration files
 public/                    ⚠️ LEGACY static HTML + vanilla JS (see §3)
 ```
 
@@ -40,10 +60,14 @@ public/                    ⚠️ LEGACY static HTML + vanilla JS (see §3)
 `components/`. This keeps routing readable and components testable.
 
 ### State of the world
-- **No backend.** No database, no API routes.
-- **Auth is simulated** via `localStorage` (`boostai-local-session`). Not real.
-- **All content is mock data** in `site-data.ts`.
-- **No tests, and CI is being introduced** (see `docs/CICD.md`, `docs/TESTING.md`).
+- **Auth is real** — Supabase Auth with email/password and Google OAuth.
+  Sessions are managed via cookies (middleware refreshes them on every request).
+- **Database exists** — Supabase PostgreSQL with `profiles` table and RLS.
+- **Stripe groundwork is in place** — webhook handler + checkout route ready.
+  Products and pricing need to be configured in Stripe Dashboard.
+- **Content is still mock data** in `site-data.ts` (real content comes with AI features).
+- **No AI features yet** — no OpenAI calls, no document processing.
+- **CI runs on every PR** — lint, type-check, build, secret scanning.
 
 ---
 
@@ -130,7 +154,7 @@ This is the direction. Build toward it incrementally; do not assume any of it ex
 
 ---
 
-## 4. Recording decisions
+## 5. Recording decisions
 
 When a non-trivial technical choice is made (a new library, a styling-system change,
 a new service), add a short dated entry below. This is the project's memory.
@@ -138,3 +162,9 @@ a new service), add a short dated entry below. This is the project's memory.
 ### Decision log
 - **2026-06 — Baseline.** MVP = Next.js + CSS Modules + mock data, no backend.
   Legacy `public/` frozen as read-only. CI + testing strategy introduced.
+- **2026-07 — Infrastructure setup.** Added Supabase (auth + PostgreSQL + RLS),
+  Stripe groundwork (checkout + webhooks), proper env var management, enhanced
+  CI/CD with secret scanning, and comprehensive documentation (ENVIRONMENTS.md,
+  SUPABASE.md, STRIPE.md). Replaced fake localStorage auth with real
+  Supabase Auth. Dependencies added: `@supabase/supabase-js`, `@supabase/ssr`,
+  `stripe`.

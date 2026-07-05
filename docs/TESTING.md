@@ -72,6 +72,20 @@ reviewed by a human before it is saved. The UI should make this obvious — e.g.
 - Auto-publish AI content to the curriculum without Step 4.
 - Skip the golden set check when changing a prompt or upgrading the model.
 
+### Layer 4 — Auth flow testing
+- **What to test:** sign up, sign in, sign out, OAuth callback, protected route
+  redirect, session refresh.
+- **How:** Playwright end-to-end tests against a Supabase test project.
+- **Critical paths:** unauthenticated user visits `/dashboard` → redirected to
+  `/auth` → signs in → lands on `/dashboard` with their name.
+
+### Layer 5 — Stripe webhook testing
+- **Tool:** Stripe CLI (`stripe listen --forward-to localhost:3000/api/webhooks/stripe`).
+- **What to test:** webhook signature verification, checkout.session.completed
+  updates the profile, subscription.deleted resets to free tier.
+- **How:** `stripe trigger checkout.session.completed` and check the database.
+- **See:** `docs/STRIPE.md` for detailed testing instructions.
+
 ---
 
 ## Risk tiers — how much testing a feature needs
@@ -80,8 +94,8 @@ Not every feature needs the same level of testing. Use this table to decide.
 
 | Tier | What it covers | Required tests |
 |---|---|---|
-| **High** | Auth, payments, subscriptions, AI output, anything that handles user data | Component tests for every behaviour + Playwright end-to-end smoke test of the critical path + AI evaluation (if AI output is involved) |
-| **Medium** | New interactive UI (tabs, forms, state, localStorage), new API routes | Component tests for the core behaviours (happy path + one failure case) |
+| **High** | Auth, payments, subscriptions, AI output, anything that handles user data | Component tests for every behaviour + Playwright end-to-end smoke test of the critical path + AI evaluation (if AI output is involved). For auth: test sign-up, sign-in, sign-out, OAuth, and protected route redirects. For payments: test webhook signature verification and subscription tier updates. |
+| **Medium** | New interactive UI (tabs, forms, state), new API routes | Component tests for the core behaviours (happy path + one failure case) |
 | **Low** | Copy changes, styling, static layout, new landing page content | Preflight only (`/preflight`) — no additional tests needed |
 
 **When in doubt, go one tier higher.** It is always cheaper to catch a bug in a test
@@ -104,4 +118,6 @@ than to fix it after a real user hits it.
 1. ✅ Types + lint + build via `npm run verify` and CI.
 2. Component tests for the two interactive components.
 3. Playwright smoke test of the 4 critical paths.
-4. AI evaluation harness — built **together with** the first AI feature, never after.
+4. Auth flow end-to-end tests (sign up, sign in, protected routes).
+5. Stripe webhook integration tests (using Stripe CLI).
+6. AI evaluation harness — built **together with** the first AI feature, never after.

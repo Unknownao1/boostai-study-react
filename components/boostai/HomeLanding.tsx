@@ -31,7 +31,7 @@ export function HomeLanding() {
             <a href="#workspace">Workspace</a>
             <Link href="/school" prefetch={false}>School</Link>
             <Link href="/uni" prefetch={false}>Uni</Link>
-            <a href="/login.html?mode=login&returnTo=%2F">Login</a>
+            <Link href="/auth" prefetch={false}>Login</Link>
             <a href="#join" className={styles.navCta}>
               Get source-ready
             </a>

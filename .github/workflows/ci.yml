@@ -11,8 +11,9 @@ on:
 
 jobs:
   verify:
-    name: Lint and build
+    name: Lint, type-check, and build
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,3 +35,34 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          # Dummy values so the build doesn't crash on missing env vars.
+          # Real values live in Vercel project settings.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_placeholder
+          STRIPE_SECRET_KEY: sk_test_placeholder
+          STRIPE_WEBHOOK_SECRET: whsec_placeholder
+          NEXT_PUBLIC_APP_URL: https://boostai.study
+
+  security:
+    name: Security checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for secrets in code
+        run: |
+          # Fail if any common secret patterns are found in tracked files
+          # (ignoring .env.example which has placeholder values)
+          if git grep -lE '(sk_live_|sk_test_[a-zA-Z0-9]{20,}|whsec_[a-zA-Z0-9]{20,}|service_role.*eyJ)' -- ':!.env.example' ':!*.md'; then
+            echo "::error::Possible secrets found in tracked files!"
+            exit 1
+          fi
+          echo "No secrets detected."
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high || true
