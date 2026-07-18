@@ -52,7 +52,7 @@ components/boostai/        The real UI
   *.module.css             Styles
 supabase/
   migrations/              SQL migration files
-public/                    ⚠️ LEGACY static HTML + vanilla JS (see §3)
+public/                    Static assets only (fonts, images, favicon)
 ```
 
 ### Principle: thin routes, real components
@@ -71,17 +71,18 @@ public/                    ⚠️ LEGACY static HTML + vanilla JS (see §3)
 
 ---
 
-## 2. The legacy zone (technical debt)
+## 2. The legacy zone — retired
 
-`public/` holds an older, separate implementation of the site as plain HTML + JS
-(`login.html`, `school/`, `uni/`, `auth/`, `legacy/`, `assets/*.js`). It includes the
-only Supabase auth code that exists, plus duplicated `*-v2`/`*-nb2` bundles of
-unclear status.
+`public/` used to hold an older, separate implementation of the site as plain
+HTML + JS (`login.html`, `school/`, `uni/`, `auth/`, `legacy/`, `assets/*.js`),
+served via `next.config.ts` rewrites for `/school` and `/uni`.
 
-**Decision:** treat `public/` as **read-only legacy**. New features are built in
-React under `app/` + `components/`. Pieces of the legacy site get rewritten in React
-as the roadmap reaches them (auth is the first candidate). Do not extend the legacy
-stack. See `CLAUDE.md` §2.
+**As of this change:** `/school` and `/uni` are real Next.js routes
+(`app/school/page.tsx`, `app/uni/page.tsx`) rendering the `PersonaLanding`
+component with `schoolLanding` / `universityLanding` data from `site-data.ts`
+— that component already existed and was fully built but unused. The legacy
+HTML/JS files and the rewrites pointing to them have been deleted.
+`public/` now holds only static assets: fonts, images, favicon, logo.
 
 ---
 

@@ -60,6 +60,24 @@ export async function POST(request: Request) {
 
   const supabase = getAdminClient();
 
+  // Idempotency: Stripe retries webhooks, so skip anything we've already
+  // processed. subscription_events.stripe_event_id has a unique constraint.
+  const { error: logError } = await supabase
+    .from("subscription_events")
+    .insert({
+      stripe_event_id: event.id,
+      event_type: event.type,
+      data: event.data.object,
+    });
+
+  if (logError) {
+    if (logError.code === "23505") {
+      // Unique violation — we've already handled this event.
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+    console.error("Failed to log webhook event:", logError);
+  }
+
   try {
     switch (event.type) {
       case "checkout.session.completed": {

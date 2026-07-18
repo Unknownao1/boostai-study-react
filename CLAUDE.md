@@ -54,16 +54,14 @@ new tools, libraries, or services unless the task explicitly requires it and
 | Environment variables | `.env.example` (template) + `lib/env.ts` (validation) |
 | Database schema | `supabase/migrations/` |
 
-### ⚠️ The legacy zone — do not edit without asking
+### `public/`
 
-`public/` contains an **older, separate** version of the site built as plain
-HTML + JavaScript (`public/login.html`, `public/school/`, `public/uni/`,
-`public/auth/`, `public/legacy/`, and everything in `public/assets/*.js`).
-
-- This is **not** the React app. Changes here do not follow our conventions.
-- The duplicated `*-v2.js` / `*-nb2.js` files are of unknown status — **never edit them.**
-- If a task seems to require touching `public/`, **stop and ask the user first.**
-  The correct long-term move is usually to rebuild that piece in React.
+`public/` holds only static assets now: fonts, images, favicon, logo. The old
+legacy HTML/JS site that used to live here (`login.html`, `school/`, `uni/`,
+`auth/`, `legacy/`, `assets/*.js`) has been removed — `/school` and `/uni` are
+real React routes now (`app/school/`, `app/uni/`, using the `PersonaLanding`
+component). Still fine to double check with the user before restructuring
+`public/` further, but there's no separate legacy stack to worry about breaking.
 
 ---
 
@@ -130,7 +128,6 @@ through the change safely.
 ## 7. When to stop and ask the user
 
 Stop and ask (use the question tool) before:
-- Editing anything in `public/`.
 - Adding a dependency, service, or environment variable.
 - Changing auth, payments, or database behaviour.
 - Modifying `middleware.ts` or `lib/supabase/middleware.ts`.

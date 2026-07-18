@@ -37,4 +37,5 @@ export const serverEnv = {
   SUPABASE_SERVICE_ROLE_KEY: requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
   STRIPE_SECRET_KEY: requireEnv("STRIPE_SECRET_KEY"),
   STRIPE_WEBHOOK_SECRET: requireEnv("STRIPE_WEBHOOK_SECRET"),
+  OPENAI_API_KEY: requireEnv("OPENAI_API_KEY"),
 } as const;

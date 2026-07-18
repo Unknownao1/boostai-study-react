@@ -1,10 +1,24 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import styles from "./boostai.module.css";
 import { routeCards } from "./site-data";
 import { StudyWorkspace } from "./StudyWorkspace";
 
+const EXAM_LEVELS = ["GCSE", "A-Level", "IB", "IGCSE", "university"];
+const EXAM_BOARDS = ["AQA", "Edexcel", "OCR", "WJEC", "CCEA", "IB"];
+
 export function HomeLanding() {
+  const [levelIndex, setLevelIndex] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setLevelIndex((i) => (i + 1) % EXAM_LEVELS.length);
+    }, 2200);
+    return () => clearInterval(id);
+  }, []);
   return (
     <main className={styles.page}>
       <div className={styles.orbA} />
@@ -33,7 +47,7 @@ export function HomeLanding() {
             <Link href="/uni" prefetch={false}>Uni</Link>
             <Link href="/auth" prefetch={false}>Login</Link>
             <a href="#join" className={styles.navCta}>
-              Get source-ready
+              Why BoostAI
             </a>
           </nav>
         </div>
@@ -42,30 +56,55 @@ export function HomeLanding() {
       <section className={styles.shell}>
         <div className={styles.hero}>
           <div className={styles.heroCopy}>
-            <span className={styles.eyebrow}>Three-page React source</span>
+            <span className={styles.eyebrow}>AI exam practice</span>
             <h1>
-              Where are you studying <span>right now?</span>
+              Practise like it&apos;s the real{" "}
+              <span className={styles.rotatingWord} key={levelIndex}>
+                {EXAM_LEVELS[levelIndex]}
+              </span>{" "}
+              exam
             </h1>
             <p>
-              This homepage acts as the route chooser for BoostAI Study and includes
-              a live question workspace preview so visitors can understand the product
-              before they commit to school or university mode.
+              Paste any question you&apos;ve already worked through and BoostAI
+              generates fresh ones testing the exact same concept — with
+              mark-scheme style working, not just an answer key.
             </p>
             <div className={styles.heroActions}>
-              <Link className={styles.primaryButton} href="/school" prefetch={false}>
-                Go to school route
+              <Link className={styles.primaryButton} href="/auth" prefetch={false}>
+                Start practising free
               </Link>
-              <Link className={styles.secondaryButton} href="/uni" prefetch={false}>
-                Go to university route
-              </Link>
+              <a className={styles.secondaryButton} href="#workspace">
+                See how it works
+              </a>
+            </div>
+
+            <div className={styles.boardStrip}>
+              <span>Built for every UK exam board</span>
+              <div className={styles.boardRow}>
+                {EXAM_BOARDS.map((board) => (
+                  <span key={board} className={styles.boardChip}>
+                    {board}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
 
           <div className={styles.heroMediaWrap}>
+            <div className={styles.rocketLaunch} aria-hidden="true">
+              <Image
+                className={styles.rocketMark}
+                src="/logo.svg"
+                alt=""
+                width={120}
+                height={120}
+              />
+              <div className={styles.rocketTrail} />
+            </div>
             <Image
               className={styles.heroMedia}
               src="/boostai/images/hero-demo-image.webp"
-              alt="BoostAI landing page preview"
+              alt="BoostAI question workspace preview"
               width={720}
               height={590}
               priority
@@ -76,11 +115,12 @@ export function HomeLanding() {
 
         <section className={styles.routeSection} id="routes">
           <div className={styles.sectionHeading}>
-            <span className={styles.eyebrow}>Entry routes</span>
-            <h2>Two focused paths, one shared product language</h2>
+            <span className={styles.eyebrow}>Choose your path</span>
+            <h2>One product, tuned for where you&apos;re studying</h2>
             <p>
-              The homepage mirrors the live site intent: help visitors self-select the
-              version of BoostAI that matches their study context.
+              School and university work look different on the page, but the
+              engine underneath — generate similar, practise, check your
+              working — stays the same.
             </p>
           </div>
 
@@ -129,24 +169,24 @@ export function HomeLanding() {
 
         <section className={styles.summaryGrid} id="join">
           <article className={styles.summaryCard}>
-            <h3>Clean handoff for development</h3>
+            <h3>Unlimited similar questions</h3>
             <p>
-              The project is built as editable Next.js source code rather than a static
-              export bundle, so a client team can develop on top of it immediately.
+              Stuck isn&apos;t the end — get another question testing the same
+              concept, and another, until it actually clicks.
             </p>
           </article>
           <article className={styles.summaryCard}>
-            <h3>Reusable components</h3>
+            <h3>Mark-scheme style working</h3>
             <p>
-              Shared layout, route cards, CTA styles, and section blocks keep the three
-              pages consistent without duplicating code.
+              Every generated question comes with terse, numbered steps —
+              the way examiners actually award marks, not a wall of prose.
             </p>
           </article>
           <article className={styles.summaryCard}>
-            <h3>Local assets included</h3>
+            <h3>Matched to your exam board</h3>
             <p>
-              Fonts, logo, and preview imagery live in the project&apos;s `public`
-              folder, so the landing pages work without depending on third-party CDNs.
+              Tell BoostAI your subject and level once. Every question after
+              that is pitched at the right difficulty for your syllabus.
             </p>
           </article>
         </section>
