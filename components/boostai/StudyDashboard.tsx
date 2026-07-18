@@ -1,8 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import styles from "./dashboard.module.css";
+import { AskBoostAI } from "./AskBoostAI";
+import { QuestionBank } from "./QuestionBank";
+import { EssayMarker } from "./EssayMarker";
+import { FREE_TIER_QUESTION_LIMIT } from "@/lib/limits";
 
 interface UserInfo {
   id: string;
@@ -11,6 +16,8 @@ interface UserInfo {
 
 interface StudyDashboardProps {
   user: UserInfo;
+  subscriptionTier?: string;
+  questionsUsed?: number;
 }
 
 type NavItem = {
@@ -93,8 +100,14 @@ function timeGreeting() {
   return "Good evening";
 }
 
-export function StudyDashboard({ user }: StudyDashboardProps) {
+export function StudyDashboard({
+  user,
+  subscriptionTier = "free",
+  questionsUsed = 0,
+}: StudyDashboardProps) {
   const name = nameFromEmail(user.email);
+  const [activeView, setActiveView] = useState("Home");
+  const isPro = subscriptionTier !== "free";
 
   return (
     <main className={styles.page}>
@@ -118,14 +131,18 @@ export function StudyDashboard({ user }: StudyDashboardProps) {
             <div className={styles.navGroup} key={section.title}>
               <span className={styles.groupTitle}>{section.title}</span>
               {section.items.map((item) => (
-                <div
-                  className={item.active ? styles.navItemActive : styles.navItem}
+                <button
+                  type="button"
+                  className={
+                    item.label === activeView ? styles.navItemActive : styles.navItem
+                  }
                   key={item.label}
+                  onClick={() => setActiveView(item.label)}
                 >
                   <span className={styles.navIcon}>{item.icon}</span>
                   <span>{item.label}</span>
                   {item.meta ? <span className={styles.navMeta}>{item.meta}</span> : null}
-                </div>
+                </button>
               ))}
             </div>
           ))}
@@ -167,14 +184,30 @@ export function StudyDashboard({ user }: StudyDashboardProps) {
 
             <div className={styles.topActions}>
               <div className={styles.energyPill}>
-                <span>⚡ ∞</span>
-                <span className={styles.energyStatus}>Preview active</span>
+                <span>{isPro ? "⚡ Pro" : "⚡ Free"}</span>
+                <span className={styles.energyStatus}>
+                  {isPro
+                    ? "Unlimited generation"
+                    : `${questionsUsed} / ${FREE_TIER_QUESTION_LIMIT} questions used`}
+                </span>
               </div>
-              <div className={styles.streakPill}>⚡ 14 / 15</div>
               <div className={styles.avatar}>{name.charAt(0).toUpperCase()}</div>
             </div>
           </div>
 
+          {activeView === "Ask BoostAI" ? (
+            <div className={styles.mainColumn}>
+              <AskBoostAI />
+            </div>
+          ) : activeView === "Question Bank" ? (
+            <div className={styles.mainColumn}>
+              <QuestionBank />
+            </div>
+          ) : activeView === "Essay Marker" ? (
+            <div className={styles.mainColumn}>
+              <EssayMarker />
+            </div>
+          ) : (
           <div className={styles.grid}>
             <div className={styles.mainColumn}>
               <section className={styles.heroPanel}>
@@ -183,13 +216,18 @@ export function StudyDashboard({ user }: StudyDashboardProps) {
                   {timeGreeting()}, <span>{name}</span>
                 </h1>
                 <p>
-                  Your preview account is live. Start with a revision plan, open a
-                  question bank, or jump back to the landing flow whenever you need.
+                  Paste a question you&apos;re stuck on and BoostAI will generate
+                  more like it, or browse everything you&apos;ve already
+                  generated in your question bank.
                 </p>
                 <div className={styles.heroActions}>
-                  <a className={styles.primaryCta} href="#">
-                    Create my revision plan →
-                  </a>
+                  <button
+                    type="button"
+                    className={styles.primaryCta}
+                    onClick={() => setActiveView("Ask BoostAI")}
+                  >
+                    Ask BoostAI a question →
+                  </button>
                   <Link className={styles.secondaryCta} href="/">
                     Back to landing page
                   </Link>
@@ -228,7 +266,7 @@ export function StudyDashboard({ user }: StudyDashboardProps) {
                 <div className={styles.sectionHeader}>
                   <div>
                     <h2>My subjects</h2>
-                    <div className={styles.subtle}>Continue where your preview account left off.</div>
+                    <div className={styles.subtle}>Jump back into your last subject.</div>
                   </div>
                   <a className={styles.addButton} href="#">
                     + Add subjects
@@ -319,6 +357,7 @@ export function StudyDashboard({ user }: StudyDashboardProps) {
               </div>
             </aside>
           </div>
+          )}
         </section>
       </div>
     </main>

@@ -11,5 +11,22 @@ export default async function DashboardPage() {
     redirect("/auth?redirectTo=/dashboard");
   }
 
-  return <StudyDashboard user={{ id: user.id, email: user.email ?? "" }} />;
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("subscription_tier")
+    .eq("id", user.id)
+    .single();
+
+  const { count: questionsUsed } = await supabase
+    .from("generated_questions")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
+  return (
+    <StudyDashboard
+      user={{ id: user.id, email: user.email ?? "" }}
+      subscriptionTier={profile?.subscription_tier ?? "free"}
+      questionsUsed={questionsUsed ?? 0}
+    />
+  );
 }
